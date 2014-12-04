@@ -15,6 +15,7 @@ join=function(x)
 	}
 	return(tmp)
 }
+extractdiags = function(x) tryCatch(diag(solve(x)),error = function(e) {print("Lapack routine dgesv: system is exactly singular");rep(NA,nsurv+npcap)})
 logit=function(x)log(x/(1-x))
 invlogit=function(x)exp(x)/(exp(x)+1)
 
@@ -30,7 +31,7 @@ createdata=TRUE
 if (createdata)
 {
 	#specify the number of tagged individuals for data generation
-	nind=10000
+	nind=30
 	#set up survival and pcap for data genration these will be distributed according to the blocking
 	tbsurv=c(0.7,0.5)
 	tbpcap=c(0.1,0.3,0.2)
@@ -146,10 +147,11 @@ nll=function(theta)
 }
 
 fit=optim(theta,nll,hessian=TRUE)
-MLE=invlogit(fit$par)
-Lower95=invlogit(fit$par-1.96*diag(solve(fit$hessian)))
-Upper95=invlogit(fit$par+1.96*diag(solve(fit$hessian)))
-output=data.frame(Labels=parlab,MLE=MLE,Lower95=Lower95,Upper95=Upper95)
+mle=invlogit(fit$par)
+diags=extractdiags(fit$hessian) 
+lower95=invlogit(fit$par-1.96*diags)
+upper95=invlogit(fit$par+1.96*diags)
+output=data.frame(Labels=parlab,mle=mle,lower95=lower95,upper95=upper95)
 output
 
 
