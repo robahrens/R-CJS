@@ -20,21 +20,21 @@ logit=function(x)log(x/(1-x))
 invlogit=function(x)exp(x)/(exp(x)+1)
 
 #Global values used to generate data and estimate
-nsample=10 #number of recapture events
-survblock=c(1,1,1,1,1,2,2,2,2,2) # this is a vector for how survival should be blocked in time(the max blocks is nsample)
-pcapblock=c(1,1,1,2,2,2,3,3,3,3) # this is a vector of how pcap shoul be blocked in time(the max blocks is nsample)
+nsample=5 #number of recapture events
+survblock=c(1,1,1,2,2) # this is a vector for how survival should be blocked in time(the max blocks is nsample)
+pcapblock=c(1,1,2,2,2) # this is a vector of how pcap shoul be blocked in time(the max blocks is nsample)
 nsurv=2 #this must be specified by the user and line up with the number of blocks used in the vector above
-npcap=3 #this must be specified by the user and line up with the number of blocks used in the vector above
+npcap=2 #this must be specified by the user and line up with the number of blocks used in the vector above
 parlab=c(paste(rep("s",nsurv),1:nsurv,sep=""),paste(rep("p",nsurv),1:npcap,sep=""))
 filename="recap.inp"
 createdata=TRUE
 if (createdata)
 {
 	#specify the number of tagged individuals for data generation
-	nind=30
+	nind=100
 	#set up survival and pcap for data genration these will be distributed according to the blocking
-	tbsurv=c(0.7,0.5)
-	tbpcap=c(0.1,0.3,0.2)
+	tbsurv=c(0.7,0.8)
+	tbpcap=c(0.3,0.5)
 	tsurv=vector(length=nsample)
 	tpcap=vector(length=nsample)
 	for (i in 1:nsample)
@@ -149,10 +149,20 @@ nll=function(theta)
 fit=optim(theta,nll,hessian=TRUE)
 mle=invlogit(fit$par)
 diags=extractdiags(fit$hessian) 
-lower95=invlogit(fit$par-1.96*diags)
-upper95=invlogit(fit$par+1.96*diags)
+lower95=invlogit(fit$par-1.96*sqrt(diags))
+upper95=invlogit(fit$par+1.96*sqrt(diags))
+k=nsurv+npcap
+aic=2*fit$value+2*k 
+aicc=aic+2*k*(k+1)/(nind-k-1)
+svddiag=svd(fit$hessian)$d
+epars=k-length(which(svddiag<0.001*max(svddiag)))
+if(sum(svddiag)==0)epars=0
 output=data.frame(Labels=parlab,mle=mle,lower95=lower95,upper95=upper95)
+if(epars<k)print(paste("Number of estimable paramters for this configuration is",epars))
 output
+aic
+aicc
+
 
 
 
